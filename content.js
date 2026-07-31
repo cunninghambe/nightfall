@@ -37,7 +37,7 @@ html[data-nightfall="soft"] {
   /* Soft: for saturated-brand sites. Land on dark grey instead of black and
      mute the palette instead of flipping it to loud complements. Photos lose
      some pop (grayscale has no counter-filter); that's this mode's trade. */
-  filter: invert(0.92) hue-rotate(180deg) grayscale(0.5) brightness(${settings.brightness}%) contrast(${settings.contrast}%) !important;
+  filter: invert(0.92) hue-rotate(180deg) grayscale(0.35) brightness(${settings.brightness}%) contrast(${settings.contrast}%) !important;
 }
 html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
   filter: invert(1) hue-rotate(180deg) !important;
