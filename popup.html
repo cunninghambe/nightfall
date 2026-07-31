@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Nightfall</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img class="logo" src="icons/icon48.png" alt="">
+    <h1>Nightfall</h1>
+    <label class="switch" title="Enable Nightfall">
+      <input type="checkbox" id="enabled">
+      <span class="track"><span class="thumb"></span></span>
+    </label>
+  </header>
+
+  <section class="row" id="site">
+    <div class="host" id="host"></div>
+    <div class="seg" id="seg">
+      <button type="button" data-value="auto">Auto</button>
+      <button type="button" data-value="on">On</button>
+      <button type="button" data-value="off">Off</button>
+    </div>
+  </section>
+
+  <section class="row note" id="nosite" hidden>Nightfall can't run on this page.</section>
+
+  <section class="row">
+    <label class="check">
+      <input type="checkbox" id="smart">
+      <span>Skip pages that are already dark</span>
+    </label>
+  </section>
+
+  <section class="row">
+    <div class="slider">
+      <div class="slider-label"><span>Brightness</span><span class="value" id="brightness-value">100%</span></div>
+      <input type="range" id="brightness" min="60" max="110" step="5">
+    </div>
+    <div class="slider">
+      <div class="slider-label"><span>Contrast</span><span class="value" id="contrast-value">100%</span></div>
+      <input type="range" id="contrast" min="60" max="140" step="5">
+    </div>
+    <button type="button" class="reset" id="reset">Reset</button>
+  </section>
+
+  <footer>
+    <span class="key">Alt</span><span class="key">Shift</span><span class="key">D</span>
+    toggles the current site
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
