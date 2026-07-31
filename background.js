@@ -2,7 +2,7 @@ const DEFAULTS = { enabled: true, smart: true, brightness: 100, contrast: 100, s
 
 // Same resolution rules as content.js.
 function effectiveOn(settings, override, isDark) {
-  if (override === 'on') return true;
+  if (override === 'on' || override === 'soft') return true;
   if (override === 'off') return false;
   if (!settings.enabled) return false;
   if (settings.smart && isDark) return false;

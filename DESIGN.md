@@ -291,6 +291,27 @@ skipped. White/near-white docs (sat ~0) → inverted. Pale tints like #e8f0fe
 inverted. Popup label becomes "Skip pages that are already dark or colorful".
 darkHosts cache semantics unchanged (stores the skip verdict either way).
 
+## v1.5 addendum — per-site Soft mode (field request, app.quantic.edu 2026-07-31)
+
+For saturated-brand sites the user stares at daily (Quantic MBA), full inversion
+is garish (loud complements on pure black) and Off means no dark mode at all.
+Soft is a third per-site override value: `sites[host] = 'soft'`.
+
+- CSS: `html[data-nightfall="soft"]` overrides the filter to
+  `invert(0.92) hue-rotate(180deg) grayscale(0.5) brightness(B%) contrast(C%)`.
+  invert(0.92) lands white on ~#141414 dark grey (not black) and black text on
+  ~#ebebeb (not stark white); grayscale(0.5) mutes brand colours into dusky
+  tones instead of flipping them to complements. Base rules (canvas white,
+  color-scheme split, media counter-invert) still match via `[data-nightfall]`.
+- The attribute now carries the mode: `data-nightfall=""` (normal) or `"soft"`.
+  resolve() returns 'on' | 'soft' | false; 'soft' only ever comes from an
+  explicit override (auto-detection never picks it).
+- Known trades, accepted: photos render slightly washed + half-desaturated in
+  Soft (counter-invert cancels invert/hue-rotate but grayscale has no inverse);
+  Alt+Shift+D from Soft goes to Off (shortcut still toggles on/off only);
+  background.js treats 'soft' as on for topState and shortcut state.
+- Popup segmented control is Auto | On | Soft | Off.
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,

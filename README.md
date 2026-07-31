@@ -35,7 +35,10 @@ alternative to Dark Reader: fewer knobs, fewer surprises.
 ## Features
 
 - 🌐 **Global switch** — dark mode everywhere, off with one click when you need it.
-- 📌 **Per-site control** — Auto / On / Off for the current site, and overrides stick.
+- 📌 **Per-site control** — Auto / On / Soft / Off for the current site, and
+  overrides stick. **Soft** darkens without the full flip: dark grey instead of
+  black, brand colors muted instead of inverted — made for colorful apps you
+  stare at all day.
 - 🌒 **Already-dark sites are skipped** automatically (toggleable).
 - 🔆 **Brightness and contrast sliders** with live preview.
 - 🖤 **Dark scrollbars** — the viewport scrollbar switches to Chrome's native
@@ -71,7 +74,7 @@ Click the toolbar icon to open the popup:
 | Control | What it does |
 |---|---|
 | Header switch | Master on/off for the whole extension |
-| **Auto / On / Off** | Per-site override for the current site; *Auto* follows the global setting plus smart detection |
+| **Auto / On / Soft / Off** | Per-site override for the current site; *Auto* follows the global setting plus smart detection; *Soft* is a gentler dark — grey canvas, muted colors — for saturated-brand sites |
 | *Skip pages that are already dark or colorful* | Toggles smart detection |
 | **Brightness** (60–110%) / **Contrast** (60–140%) | Applied live to every darkened page; **Reset** restores 100% |
 

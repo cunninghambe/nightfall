@@ -30,6 +30,12 @@ html[data-nightfall] body {
      must keep rendering light so the inversion turns them dark. */
   color-scheme: light !important;
 }
+html[data-nightfall="soft"] {
+  /* Soft: for saturated-brand sites. Land on dark grey instead of black and
+     mute the palette instead of flipping it to loud complements. Photos lose
+     some pop (grayscale has no counter-filter); that's this mode's trade. */
+  filter: invert(0.92) hue-rotate(180deg) grayscale(0.5) brightness(${settings.brightness}%) contrast(${settings.contrast}%) !important;
+}
 html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
   filter: invert(1) hue-rotate(180deg) !important;
 }
@@ -47,23 +53,26 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
 
   // --- state ---------------------------------------------------------------
 
+  // Returns 'on', 'soft', or false.
   function resolve(override, isDark) {
-    if (override === 'on') return true;
+    if (override === 'on') return 'on';
+    if (override === 'soft') return 'soft';
     if (override === 'off') return false;
     if (!settings.enabled) return false;
     if (settings.smart && isDark) return false;
-    return true;
+    return 'on';
   }
 
   // Child frames never trust their own host alone: top frame must be dark too.
   const ownResolve = () => resolve(host ? settings.sites?.[host] : undefined, knownDark);
-  const effectiveOn = () => (isTop ? ownResolve() : topOn && ownResolve());
+  const effectiveMode = () => (isTop ? ownResolve() : topOn && ownResolve());
 
   function apply() {
     ensureStyle();
-    const on = effectiveOn();
-    document.documentElement.toggleAttribute('data-nightfall', on);
-    if (on) startScanner();
+    const mode = effectiveMode();
+    if (mode) document.documentElement.setAttribute('data-nightfall', mode === 'soft' ? 'soft' : '');
+    else document.documentElement.removeAttribute('data-nightfall');
+    if (mode) startScanner();
     else stopScanner();
   }
 
