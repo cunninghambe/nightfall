@@ -90,10 +90,11 @@ Writes `icon16.png`, `icon48.png`, and `icon128.png` next to the script
 ## Known limitations
 
 - **Small or tiling background photos stay inverted.** The scanner treats a
-  background image under 96×72, or one that repeats at its natural size
-  (`background-size: auto` without `no-repeat`), as UI — an icon, a sprite
-  sheet, a texture — and leaves it inverted with the rest of the page. A genuine
-  photo used as a small thumbnail or a tiling backdrop gets caught by that.
+  background image under 96×72, one that visibly tiles across its box, or one
+  painted on a page-sized wrapper element as UI — an icon, a sprite sheet, a
+  texture, a themed backdrop — and leaves it inverted with the rest of the
+  page. A genuine photo used as a small thumbnail or a tiling backdrop gets
+  caught by that.
 - **A late dark theme can still flash on the first visit.** Nightfall inverts
   immediately at `document_start`; if the site paints its own dark theme a
   moment later, you'll see a brief inverted flash before detection catches up.

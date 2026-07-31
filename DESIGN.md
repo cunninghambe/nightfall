@@ -258,6 +258,22 @@ rendering light for the inversion to turn them dark. Known edge, accepted: a
 root scrollbar the site custom-styles via ::-webkit-scrollbar keeps its authored
 (light) colors, since it's outside the filter and ignores color-scheme.
 
+## v1.3 addendum — scanner false-positive guards (field bug, app.quantic.edu 2026-07-31)
+
+Field failure: the scanner tagged a full-viewport page wrapper carrying a
+turquoise pattern tile with `background-repeat: repeat` and an EXPLICIT
+`background-size: 379px 216px`. The v1.2 tiling rule (`size === 'auto' &&
+repeat !== 'no-repeat'`) missed it, and counter-inverting the wrapper
+un-darkened the entire UI inside it — Nightfall silently no-ops on any site
+built that way. Two guards, both required before tagging:
+
+1. `isTiling(size, repeat, rect)`: no-repeat -> false; size auto -> true;
+   explicit `Wpx Hpx` -> true when the tile is <= half the box in BOTH axes
+   (pattern tiles get explicit sizes too); cover/contain/percentages -> false.
+2. `isPageScale(el, rect)`: box area >= 90% of the viewport AND > 50 descendant
+   elements -> themed backdrop wrapping the UI, never a photo. (A full-bleed
+   hero section with a heading and a button stays taggable — few descendants.)
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,

@@ -89,6 +89,23 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
   const idle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 500 }) : setTimeout(fn, 50));
   const unidle = (id) => (window.requestIdleCallback ? cancelIdleCallback(id) : clearTimeout(id));
 
+  // "Tiling" means the image visibly repeats across the box. background-repeat's
+  // INITIAL value is repeat, so repeat alone proves nothing — and pattern tiles
+  // are often given EXPLICIT sizes, so a tile much smaller than its box counts.
+  function isTiling(size, repeat, r) {
+    if (repeat === 'no-repeat') return false;
+    if (size === 'auto') return true;
+    const m = /^(\d+(?:\.\d+)?)px (\d+(?:\.\d+)?)px$/.exec(size);
+    return !!m && +m[1] <= r.width / 2 && +m[2] <= r.height / 2;
+  }
+
+  // A "photo" wrapping the page's whole UI is a themed backdrop, not a photo —
+  // counter-inverting it would un-darken everything inside it.
+  function isPageScale(el, r) {
+    return r.width * r.height >= innerWidth * innerHeight * 0.9 &&
+      el.getElementsByTagName('*').length > 50;
+  }
+
   // All reads (computed style, then rects) before any attribute write.
   function scanSlice(from, to) {
     const cand = [];
@@ -97,19 +114,16 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
       const el = queue[i];
       if (!el.isConnected || el === document.documentElement || el === document.body) continue;
       const cs = getComputedStyle(el);
-      // "Tiling" means it would repeat at natural size. background-repeat's
-      // INITIAL value is repeat, so repeat alone proves nothing — sized
-      // backgrounds (cover/contain/explicit) are photos regardless.
-      const tiles = cs.backgroundSize === 'auto' && cs.backgroundRepeat !== 'no-repeat';
-      if (cs.backgroundImage.includes('url(') && !tiles) cand.push(el);
+      if (cs.backgroundImage.includes('url(')) cand.push([el, cs.backgroundSize, cs.backgroundRepeat]);
       else if (el.hasAttribute(TAG)) drop.push(el);
     }
     const tag = [];
-    for (const el of cand) {
+    for (const [el, size, repeat] of cand) {
       const r = el.getBoundingClientRect();
-      const big = r.width >= MIN_W && r.height >= MIN_H;
-      if (big && !el.hasAttribute(TAG)) tag.push(el);
-      else if (!big && el.hasAttribute(TAG)) drop.push(el);
+      const photo = r.width >= MIN_W && r.height >= MIN_H &&
+        !isTiling(size, repeat, r) && !isPageScale(el, r);
+      if (photo && !el.hasAttribute(TAG)) tag.push(el);
+      else if (!photo && el.hasAttribute(TAG)) drop.push(el);
     }
     for (const el of tag) el.setAttribute(TAG, '');
     for (const el of drop) el.removeAttribute(TAG);
