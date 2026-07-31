@@ -2,6 +2,8 @@
 
 Fast, simple dark mode for Chrome.
 
+![The same Wikipedia article rendered light, and dark through Nightfall](assets/screenshot.png)
+
 Nightfall is a Manifest V3 extension that turns any site dark with a single CSS
 filter — no build step, no dependencies, no network requests, and no per-element
 style rewriting to slow pages down or glitch out. It was built as a lighter-weight
@@ -34,6 +36,8 @@ alternative to Dark Reader: fewer knobs, fewer surprises.
 - 📌 **Per-site control** — Auto / On / Off for the current site, and overrides stick.
 - 🌒 **Already-dark sites are skipped** automatically (toggleable).
 - 🔆 **Brightness and contrast sliders** with live preview.
+- 🖤 **Dark scrollbars** — the viewport scrollbar switches to Chrome's native
+  dark style on darkened pages.
 - ⌨️ **Alt+Shift+D** toggles the current site from the keyboard
   (rebindable at `chrome://extensions/shortcuts`).
 

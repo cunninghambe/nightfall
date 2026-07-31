@@ -247,6 +247,17 @@ tiling background photos stay inverted (icon heuristic), a site that paints its
 dark theme late can still flash briefly on first visit, chrome:// pages
 untouchable. Bump the line-count claim if it drifts.
 
+## v1.2 addendum — dark scrollbars (shipped with the README screenshot)
+
+The viewport scrollbar is painted outside the root filter (that's why it stayed
+light) but follows the root element's color-scheme. Fix, in the injected CSS:
+`color-scheme: dark !important` on `html[data-nightfall]` (native dark viewport
+scrollbar) plus `color-scheme: light !important` on `html[data-nightfall] body`
+— the page content IS filtered, so form controls and inner scrollbars must keep
+rendering light for the inversion to turn them dark. Known edge, accepted: a
+root scrollbar the site custom-styles via ::-webkit-scrollbar keeps its authored
+(light) colors, since it's outside the filter and ignores color-scheme.
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,

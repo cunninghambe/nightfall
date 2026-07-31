@@ -21,6 +21,14 @@
 html[data-nightfall] {
   filter: invert(1) hue-rotate(180deg) brightness(${settings.brightness}%) contrast(${settings.contrast}%) !important;
   background-color: #fff !important;
+  /* The viewport scrollbar is painted outside our filter; it follows the
+     root color-scheme, so ask for the dark one natively. */
+  color-scheme: dark !important;
+}
+html[data-nightfall] body {
+  /* ...but the page CONTENT is filtered: form controls and inner scrollbars
+     must keep rendering light so the inversion turns them dark. */
+  color-scheme: light !important;
 }
 html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
   filter: invert(1) hue-rotate(180deg) !important;

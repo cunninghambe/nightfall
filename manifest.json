@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nightfall",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Fast, simple dark mode for every site. Per-site toggle, smart skip for already-dark pages, brightness and contrast controls.",
   "permissions": ["storage", "activeTab"],
   "background": { "service_worker": "background.js" },
