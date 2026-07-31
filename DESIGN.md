@@ -274,6 +274,23 @@ built that way. Two guards, both required before tagging:
    elements -> themed backdrop wrapping the UI, never a photo. (A full-bleed
    hero section with a heading and a button stays taggable — few descendants.)
 
+## v1.4 addendum — skip strongly tinted pages (field finding, app.quantic.edu 2026-07-31)
+
+Inverting Quantic's teal app produced garbage even with the v1.3 scanner guards:
+the background is a MID-TONE brand colour (lum 0.53), and invert+hue-rotate maps
+mid-tones approximately onto themselves — so inversion bought no darkness on the
+canvas while flipping the white cards black and lightening the dark pattern
+image. Conclusion: a strongly tinted page has no white glare to kill and should
+be auto-skipped exactly like a native-dark page.
+
+`pageIsDark()` (semantics now "needs no darkening") returns true when
+`lum < 0.4` OR (`sat > 0.25` AND `lum < 0.8`), where sat = (max−min)/255 of the
+canvas colour. Calibration: Quantic teal rgb(23,166,144) → sat 0.56, lum 0.53 →
+skipped. White/near-white docs (sat ~0) → inverted. Pale tints like #e8f0fe
+(sat 0.09) → inverted. Bright saturated yellows (lum > 0.8) are still glare →
+inverted. Popup label becomes "Skip pages that are already dark or colorful".
+darkHosts cache semantics unchanged (stores the skip verdict either way).
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,

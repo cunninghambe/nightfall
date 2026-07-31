@@ -212,11 +212,17 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
 
   // getComputedStyle reports the authored colour, unaffected by our filter,
   // so the page can be measured without un-applying anything.
+  // "Dark" really means "needs no darkening": an already-dark canvas, or a
+  // strongly tinted brand colour — mid-tones map onto mid-tones under
+  // invert+hue-rotate, so inverting a colourful page buys no darkness and
+  // only scrambles its design. Nightfall kills white glare, nothing else.
   function pageIsDark() {
     let c = parseColor(getComputedStyle(document.body || document.documentElement).backgroundColor);
     if (!c || c.a < 0.1) c = parseColor(getComputedStyle(document.documentElement).backgroundColor);
     if (!c || c.a < 0.1) return false; // fully transparent renders as white
-    return (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255 < 0.4;
+    const lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
+    const sat = (Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b)) / 255;
+    return lum < 0.4 || (sat > 0.25 && lum < 0.8);
   }
 
   function detect() {
