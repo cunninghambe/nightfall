@@ -21,15 +21,18 @@ alternative to Dark Reader: fewer knobs, fewer surprises.
 - **Every frame decides for itself.** Iframes are counter-inverted by the parent
   and darkened by their own copy of the script, so an embedded video that ships
   a dark player is left alone while a light comment widget is darkened to match.
-- **Smart detection** measures the page's background and leaves alone any site
-  that needs no darkening: one that already ships a dark theme, or one built on
+- **Smart detection** measures the page's effective backdrop — what actually
+  paints behind the content at five points across the viewport, so a theme
+  painted on a full-page wrapper counts just like one on `<body>` — and leaves
+  alone any site that needs no darkening: one that already ships a dark theme,
+  or one built on
   a strongly colored background (a mid-tone brand color gains no darkness from
   inversion — it only gets its design scrambled). It re-checks after load and
   whenever the page flips a theme class, so sites with a runtime light/dark
   switch follow along in both directions. Verdicts are cached per site, so a
   skipped site never flashes inverted on a return visit.
 - Your settings live in `chrome.storage.sync` and roam with your Chrome profile.
-- Total footprint: ~350 lines of vanilla JS across a content script, a service
+- Total footprint: ~460 lines of vanilla JS across a content script, a service
   worker, and the popup.
 
 ## Features

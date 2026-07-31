@@ -312,6 +312,47 @@ Soft is a third per-site override value: `sites[host] = 'soft'`.
   background.js treats 'soft' as on for topState and shortcut state.
 - Popup segmented control is Auto | On | Soft | Off.
 
+## v1.6 addendum — backdrop-aware detection
+
+pageIsDark() samples only body/html computed backgroundColor. Two failure
+classes: (1) a dark or brand-colored theme painted on a full-page wrapper
+while body stays white/transparent — a dark SPA shell gets WRONGLY INVERTED
+into a light page, and a CSS-tinted wrapper gets pointlessly inverted;
+(2) a backdrop painted by a background-image (app.quantic.edu's pattern PNG) —
+invisible to CSS detection. Class (2) is an ACCEPTED limitation: do NOT
+canvas-sample images. This fixes class (1).
+
+Replace the body/html read with an effective-canvas sample:
+
+- Sample five viewport points: center, (25%,25%), (75%,25%), (25%,75%),
+  (75%,75%).
+- At each point call `document.elementsFromPoint(x, y)` (the full stack,
+  top → bottom) and take the FIRST element whose computed background-color is
+  opaque (alpha >= 0.9) AND whose border box covers >= 60% of the viewport
+  area. Cards, headers, and sidebars fail the area test and are skipped; the
+  stack naturally bottoms out at body/html, so pages whose theme lives there
+  behave exactly as before. No qualifying element at a point -> that sample is
+  white (the UA canvas).
+- Verdict color = majority among the five samples (>= 3 identical rgb
+  strings); no majority -> the center sample.
+- Apply the existing verdict rule unchanged: lum < 0.4 OR (sat > 0.25 &&
+  lum < 0.8). darkHosts caching, detect() call sites, and the v1.5 mode
+  plumbing (resolve() returning 'on' | 'soft' | false) are untouched.
+
+Perf: five elementsFromPoint calls plus a handful of getComputedStyle reads,
+only on detection events (DOMContentLoaded, load, +1.5 s, theme flips) — no
+per-element scanning.
+
+Fixture cases (established --dump-dom self-reporting style; detection needs no
+hostname, file:// is fine):
+- Regression, body-color canvases: teal rgb(23,166,144) -> skip; white ->
+  invert; pale tint #e8f0fe -> invert; near-black #111 -> skip.
+- Dark fixed wrapper (inset 0, opaque #111) over white body -> skip.
+- Teal CSS wrapper rgb(23,166,144) over white body -> skip.
+- White opaque wrapper over white body -> invert.
+- Dark fixed header (full-width, 64px tall) over white body -> invert (small
+  surfaces must not fool the sampler).
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,

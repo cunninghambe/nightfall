@@ -9,6 +9,9 @@
   const MIN_W = 96;
   const MIN_H = 72;
   const CHUNK = 2000;
+  const PROBES = [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
+  const CANVAS_AREA = 0.6;
+  const WHITE = 'rgb(255, 255, 255)';
   const isTop = window.self === window.top;
   const host = location.hostname;
 
@@ -219,16 +222,55 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
     return { r: +m[1], g: +m[2], b: +m[3], a: m[4] === undefined ? 1 : +m[4] };
   }
 
-  // getComputedStyle reports the authored colour, unaffected by our filter,
-  // so the page can be measured without un-applying anything.
+  // Our filter doesn't affect getComputedStyle, so the page can be measured
+  // without un-applying anything — but our own `background-color: #fff` on html
+  // does, so html only reports the site's own colour while we're off. Reading it
+  // anyway would peg every page to white. body carries no rule of ours.
+  function opaqueBg(el) {
+    if (el === document.documentElement && el.hasAttribute('data-nightfall')) return null;
+    const value = getComputedStyle(el).backgroundColor;
+    const c = parseColor(value);
+    return c && c.a >= 0.9 ? value : null;
+  }
+
+  // The canvas is whatever actually paints behind the page: body/html, or the
+  // full-page wrapper an SPA themes instead of them. Take the first opaque box
+  // in the hit-test stack that covers most of the viewport — cards, headers and
+  // sidebars are too small and get skipped. body/html paint the canvas whatever
+  // their own box measures, so they always qualify.
+  function canvasAt(x, y, base) {
+    for (const el of document.elementsFromPoint(x, y)) {
+      const value = opaqueBg(el);
+      if (!value) continue;
+      if (el === document.documentElement || el === document.body) return value;
+      const r = el.getBoundingClientRect();
+      if (r.width * r.height >= innerWidth * innerHeight * CANVAS_AREA) return value;
+    }
+    return base; // nothing opaque hit here: the canvas shows through
+  }
+
+  // The bottom of every stack: body's background paints the canvas however
+  // small (or empty) body's own box is, so it can be missed by a hit test.
+  function baseColor() {
+    return opaqueBg(document.body || document.documentElement) ||
+      opaqueBg(document.documentElement) || WHITE; // transparent renders as white
+  }
+
+  // Five probes, majority wins, no majority falls back to the centre.
+  function canvasColor() {
+    const base = baseColor();
+    const s = PROBES.map(([fx, fy]) => canvasAt(fx * innerWidth, fy * innerHeight, base));
+    for (const c of s) if (s.filter((v) => v === c).length >= 3) return c;
+    return s[0];
+  }
+
   // "Dark" really means "needs no darkening": an already-dark canvas, or a
   // strongly tinted brand colour — mid-tones map onto mid-tones under
   // invert+hue-rotate, so inverting a colourful page buys no darkness and
   // only scrambles its design. Nightfall kills white glare, nothing else.
   function pageIsDark() {
-    let c = parseColor(getComputedStyle(document.body || document.documentElement).backgroundColor);
-    if (!c || c.a < 0.1) c = parseColor(getComputedStyle(document.documentElement).backgroundColor);
-    if (!c || c.a < 0.1) return false; // fully transparent renders as white
+    const c = parseColor(canvasColor());
+    if (!c) return false;
     const lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255;
     const sat = (Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b)) / 255;
     return lum < 0.4 || (sat > 0.25 && lum < 0.8);
