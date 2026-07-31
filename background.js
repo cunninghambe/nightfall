@@ -19,6 +19,23 @@ function hostOf(url) {
   }
 }
 
+// Child frames ask for the top frame's state: sender.tab.url is the tab's
+// top-level URL, which the frame itself may not be allowed to read.
+chrome.runtime.onMessage.addListener((msg, sender, respond) => {
+  if (!msg || msg.type !== 'topState') return false;
+  const host = hostOf(sender.tab?.url);
+  if (!host) {
+    respond({ on: false });
+    return false;
+  }
+  chrome.storage.sync.get(DEFAULTS, (settings) => {
+    chrome.storage.local.get({ darkHosts: {} }, (local) => {
+      respond({ on: effectiveOn(settings, settings.sites?.[host], !!local.darkHosts?.[host]) });
+    });
+  });
+  return true;
+});
+
 chrome.commands.onCommand.addListener((command) => {
   if (command !== 'toggle-site') return;
   // activeTab is granted on command invocation, so tab.url is readable.

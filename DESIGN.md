@@ -157,3 +157,106 @@ and dispose Graphics/Bitmap.
   inverted.
 - Chrome UI pages (chrome://, Web Store) can't be scripted.
 - Shortcut can be rebound at chrome://extensions/shortcuts.
+
+---
+
+# v1.1 — limitation fixes (background-image scanner, per-frame darkening, late-theme detection)
+
+Bump manifest to `1.1.0`. Popup and icons unchanged. Three features:
+
+## A. Stylesheet background-image scanner (content.js, runs per frame)
+
+Replace `[style*="background-image"]` in the MEDIA set with a scanner-managed
+attribute. New MEDIA set (used in both places in the CSS, nesting guard kept):
+
+```
+img, video, canvas, embed, object, iframe, [data-nightfall-media]
+```
+
+(`iframe` addition belongs to feature B. Inline styles no longer get a special
+CSS path — the scanner sees them via computed style, so heuristics apply
+uniformly. The brief pre-scan window where an inline bg photo shows inverted is
+accepted.)
+
+Scanner rules — tag element with `data-nightfall-media` iff ALL of:
+1. Computed `background-image` contains `url(` (gradient-only values excluded).
+2. Rendered box is at least 96×72 px (`getBoundingClientRect`) — big boxes are
+   photos; small ones are icons/sprites, which SHOULD stay inverted with the UI.
+3. The background would not tile at natural size: skip only when computed
+   `background-size` is `auto` AND computed `background-repeat` is not
+   `no-repeat`. (`repeat` is the CSS initial value, so it alone proves nothing —
+   a `cover`/`contain`/explicitly-sized background is a photo regardless of its
+   repeat value.)
+
+Un-tag on re-scan if the element no longer qualifies.
+
+Mechanics:
+- Full scan of all elements, chunked (~2000 elements per slice) through
+  `requestIdleCallback` (setTimeout(…, 50) fallback) so big pages never jank.
+  Batch all reads first (computed style, then rects for candidates), then all
+  attribute writes.
+- Runs at DOMContentLoaded and again at window `load` (layout/lazy content settled).
+- MutationObserver: `childList` + `subtree`, plus `attributes` filtered to
+  `class`/`style`. Collect dirty subtree roots into a Set, drain it debounced
+  (~250 ms) through the same chunked scanner.
+- Scanner is active only while the frame is effectively dark: start on first
+  apply()-on, disconnect observer + cancel pending work when the state flips off
+  (leave existing tags in place — the CSS is inert without `html[data-nightfall]`).
+
+## B. Per-frame darkening (manifest + content.js + background.js)
+
+manifest: content script gets `"all_frames": true, "match_about_blank": true`.
+
+Frame roles (`const isTop = window.self === window.top`):
+- **Top frame**: v1 behaviour, plus `iframe` in the counter-invert MEDIA set —
+  a dark top frame no longer paints its iframes inverted; each frame handles itself.
+- **Child frame**: never trusts its own hostname alone. Effective state =
+  `topOn && ownResolve()` where:
+  - `topOn` comes from the background: `chrome.runtime.sendMessage({type:'topState'})`.
+    background.js gains an `onMessage` handler that reads `sender.tab.url`
+    (available — our content-script matches grant host access) and resolves the
+    top host through the same rules (override -> enabled -> smart && darkHosts).
+    Non-http(s) or unreadable sender URL -> respond `{on:false}`.
+  - `ownResolve()` is the standard v1 resolution on the child's own hostname —
+    its own site override, its own already-dark detection (a YouTube embed
+    detects dark and is left alone; a light Disqus frame inverts to match).
+    Empty hostname (about:blank/srcdoc): skip override lookup, detection only.
+  - Child frames re-query topState on EVERY storage change (sync AND local —
+    a local `darkHosts` write is how the top frame's first-visit detection
+    propagates down). No postMessage anywhere.
+- Extract the state-resolution into one function shared by top/child paths in
+  content.js; background.js keeps its own copy (no module system — accept the
+  duplication, keep both trivially small).
+
+## C. Late dark-theme detection (content.js, top frame; child frames reuse the same code path on their own document)
+
+v1 detects once at DOMContentLoaded. Add, all gated on `smart && no site override`:
+- Re-run `detect()` at window `load` and once more 1500 ms after `load`.
+- MutationObserver (separate from the scanner's, alive regardless of on/off
+  state) on `documentElement` + `body` attribute changes filtered to
+  `class`/`style`/`data-theme`-ish attrs — debounced 250 ms -> `detect()`.
+  This makes Nightfall follow sites that flip a `dark` class at runtime, in
+  both directions.
+- Existing darkHosts caching unchanged.
+
+## README updates
+
+Rewrite Known limitations: iframes and stylesheet background photos move to
+"handled" (describe briefly in How it works); remaining honest edges — small or
+tiling background photos stay inverted (icon heuristic), a site that paints its
+dark theme late can still flash briefly on first visit, chrome:// pages
+untouchable. Bump the line-count claim if it drifts.
+
+## v1.1 verification (required)
+
+1. `node --check` content.js + background.js (in the C: tree), manifest parses,
+   robocopy G:->C: rc<=7.
+2. Headless-Chrome fixture for the scanner (raw content.js with a stubbed
+   `chrome.*`): large stylesheet-class bg photo gets tagged + counter-inverted;
+   small (icon-sized) bg NOT tagged; gradient-only NOT tagged; repeat-tiled NOT
+   tagged; dynamically inserted large bg div gets tagged via the observer.
+3. Fixture for late-theme: page flips a `dark` class + colors after load ->
+   attribute un-applies within ~1 s.
+4. Frame logic: minimum bar is a stub-based test of the child-state math
+   (topOn x ownResolve matrix) with chrome.runtime stubbed; full two-frame
+   headless run with the real extension loaded is a bonus, not required.

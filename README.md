@@ -4,17 +4,26 @@ Fast, simple dark mode for Chrome.
 
 Nightfall is a Manifest V3 extension that turns any site dark with a single CSS
 filter — no build step, no dependencies, no network requests, and no per-element
-style analysis to slow pages down or glitch out. It was built as a lighter-weight
+style rewriting to slow pages down or glitch out. It was built as a lighter-weight
 alternative to Dark Reader: fewer knobs, fewer surprises.
 
 ## How it works
 
 - The page is inverted with one `filter: invert(1) hue-rotate(180deg)` rule on
-  `<html>`; images, video, canvas, and inline background images are
-  counter-inverted so photos still look natural.
+  `<html>`; images, video, canvas, and embeds are counter-inverted so photos
+  still look natural.
+- **Background photos** declared in stylesheets are found by a scanner that
+  tags photo-sized boxes (≥96×72, non-tiling, real `url()`) so they get
+  counter-inverted too. It reads in batches on idle time and re-checks only the
+  parts of the page that change, so it doesn't slow scrolling down.
+- **Every frame decides for itself.** Iframes are counter-inverted by the parent
+  and darkened by their own copy of the script, so an embedded video that ships
+  a dark player is left alone while a light comment widget is darkened to match.
 - **Smart detection** measures the page's background luminance and leaves sites
-  that already ship a dark theme alone. Verdicts are cached per site, so a dark
-  site never flashes inverted on a return visit.
+  that already ship a dark theme alone. It re-checks after load and whenever the
+  page flips a theme class, so sites with a runtime light/dark switch follow
+  along in both directions. Verdicts are cached per site, so a dark site never
+  flashes inverted on a return visit.
 - Your settings live in `chrome.storage.sync` and roam with your Chrome profile.
 - Total footprint: ~350 lines of vanilla JS across a content script, a service
   worker, and the popup.
@@ -76,16 +85,17 @@ Writes `icon16.png`, `icon48.png`, and `icon128.png` next to the script
 
 ## Known limitations
 
-- **Iframes aren't scripted** (top frame only), so embedded content — YouTube
-  embeds, ad frames, some widgets — inherits the parent page's inversion and
-  looks inverted. Workaround: set that site to **Off**.
-- **Background images declared in stylesheets** stay inverted; only inline
-  `style="background-image: …"` elements are counter-inverted.
+- **Small or tiling background photos stay inverted.** The scanner treats a
+  background image under 96×72, or one that repeats at its natural size
+  (`background-size: auto` without `no-repeat`), as UI — an icon, a sprite
+  sheet, a texture — and leaves it inverted with the rest of the page. A genuine
+  photo used as a small thumbnail or a tiling backdrop gets caught by that.
+- **A late dark theme can still flash on the first visit.** Nightfall inverts
+  immediately at `document_start`; if the site paints its own dark theme a
+  moment later, you'll see a brief inverted flash before detection catches up.
+  Return visits use the cached verdict and don't flash.
 - **Chrome's own pages** (`chrome://`, the Web Store) can't be scripted by any
   extension, so Nightfall does nothing there — the popup says so.
-- Smart detection reads the page background once at `DOMContentLoaded`; a site
-  that paints its dark theme later may get inverted on first load. Return
-  visits use the cached verdict.
 
 ## License
 
