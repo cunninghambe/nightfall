@@ -56,10 +56,12 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
 
   // --- state ---------------------------------------------------------------
 
-  // Returns 'on', 'soft', or false.
+  // Returns 'on', 'soft', 'deep', or false. 'soft'/'deep' only ever come from an
+  // explicit site override — detection never picks them.
   function resolve(override, isDark) {
     if (override === 'on') return 'on';
     if (override === 'soft') return 'soft';
+    if (override === 'deep') return 'deep';
     if (override === 'off') return false;
     if (!settings.enabled) return false;
     if (settings.smart && isDark) return false;
@@ -71,12 +73,70 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
   const effectiveMode = () => (isTop ? ownResolve() : topOn && ownResolve());
 
   function apply() {
+    let mode = effectiveMode();
+    if (mode === 'deep' && drBroken) mode = 'on';
+    if (mode === 'deep') {
+      // Never both engines: the filter comes off and the scanner stands down.
+      document.documentElement.removeAttribute('data-nightfall');
+      stopScanner();
+      goDeep();
+      return;
+    }
+    undeep();
     ensureStyle();
-    const mode = effectiveMode();
     if (mode) document.documentElement.setAttribute('data-nightfall', mode === 'soft' ? 'soft' : '');
     else document.documentElement.removeAttribute('data-nightfall');
     if (mode) startScanner();
     else stopScanner();
+  }
+
+  // --- deep mode (vendored Dark Reader engine) -----------------------------
+
+  // Loaded lazily, once per frame, and only on sites the user picks: a non-deep
+  // page never imports the bundle or sees a DarkReader global.
+  let drOn = false;
+  let drLoading = false;
+  let drBroken = false;
+  let drDeferred = false;
+
+  async function goDeep() {
+    if (!globalThis.DarkReader) {
+      if (drLoading) return;
+      drLoading = true;
+      try {
+        const ns = await import(chrome.runtime.getURL('vendor/darkreader.js'));
+        // The UMD build attaches to the isolated-world global; take the module
+        // namespace if it somehow didn't.
+        if (!globalThis.DarkReader && ns && ns.enable) globalThis.DarkReader = ns;
+        if (!globalThis.DarkReader) throw new Error('nightfall: no engine');
+      } catch {
+        drLoading = false;
+        drBroken = true; // CSP-exotic page or dead frame: plain dark beats none
+        apply();
+        return;
+      }
+      drLoading = false;
+      if (effectiveMode() !== 'deep') return; // state moved on while loading
+    }
+    try {
+      // enable() updates in place, so slider changes just call it again.
+      globalThis.DarkReader.enable({
+        brightness: settings.brightness, contrast: settings.contrast, sepia: 0
+      });
+      drOn = true;
+    } catch {
+      // Wanted a document it didn't have yet; retry once when there is one.
+      if (!drDeferred) {
+        drDeferred = true;
+        onReady(apply);
+      }
+    }
+  }
+
+  function undeep() {
+    if (!drOn) return;
+    drOn = false;
+    globalThis.DarkReader.disable();
   }
 
   function refreshTopState() {

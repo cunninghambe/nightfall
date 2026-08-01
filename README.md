@@ -5,9 +5,11 @@ Fast, simple dark mode for Chrome.
 ![The same Wikipedia article rendered light, and dark through Nightfall](assets/screenshot.png)
 
 Nightfall is a Manifest V3 extension that turns any site dark with a single CSS
-filter — no build step, no dependencies, no network requests, and no per-element
-style rewriting to slow pages down or glitch out. It was built as a lighter-weight
-alternative to Dark Reader: fewer knobs, fewer surprises.
+filter — no build step, no network requests, and no per-element style rewriting
+to slow pages down or glitch out. It was built as a lighter-weight alternative to
+Dark Reader: fewer knobs, fewer surprises. The one exception is opt-in and
+per-site: **Deep** mode, for the handful of sites a filter can't do justice,
+hands the page to Dark Reader's own engine.
 
 ## How it works
 
@@ -32,16 +34,20 @@ alternative to Dark Reader: fewer knobs, fewer surprises.
   switch follow along in both directions. Verdicts are cached per site, so a
   skipped site never flashes inverted on a return visit.
 - Your settings live in `chrome.storage.sync` and roam with your Chrome profile.
-- Total footprint: ~460 lines of vanilla JS across a content script, a service
-  worker, and the popup.
+- Total footprint: ~535 lines of vanilla JS across a content script, a service
+  worker, and the popup. Deep mode's engine is vendored separately and never
+  loads unless you turn it on for a site.
 
 ## Features
 
 - 🌐 **Global switch** — dark mode everywhere, off with one click when you need it.
-- 📌 **Per-site control** — Auto / On / Soft / Off for the current site, and
-  overrides stick. **Soft** darkens without the full flip: dark grey instead of
-  black, brand colors muted instead of inverted — made for colorful apps you
-  stare at all day.
+- 📌 **Per-site control** — Auto / On / Soft / Deep / Off for the current site,
+  and overrides stick. **Soft** darkens without the full flip: dark grey instead
+  of black, brand colors muted instead of inverted — made for colorful apps you
+  stare at all day. **Deep** swaps the filter out entirely for Dark Reader's
+  dynamic engine, which rewrites each color by its role instead of inverting
+  pixels — heavier, but the right answer on mid-grey-heavy designs. It loads
+  only on the sites you pick.
 - 🌒 **Already-dark sites are skipped** automatically (toggleable).
 - 🔆 **Brightness and contrast sliders** with live preview.
 - 🖤 **Dark scrollbars** — the viewport scrollbar switches to Chrome's native
@@ -77,7 +83,7 @@ Click the toolbar icon to open the popup:
 | Control | What it does |
 |---|---|
 | Header switch | Master on/off for the whole extension |
-| **Auto / On / Soft / Off** | Per-site override for the current site; *Auto* follows the global setting plus smart detection; *Soft* is a gentler dark — grey canvas, muted colors — for saturated-brand sites |
+| **Auto / On / Soft / Deep / Off** | Per-site override for the current site; *Auto* follows the global setting plus smart detection; *Soft* is a gentler dark — grey canvas, muted colors — for saturated-brand sites; *Deep* runs the vendored Dark Reader engine on that site instead of the filter |
 | *Skip pages that are already dark or colorful* | Toggles smart detection |
 | **Brightness** (60–110%) / **Contrast** (60–140%) | Applied live to every darkened page; **Reset** restores 100% |
 
@@ -113,3 +119,8 @@ Writes `icon16.png`, `icon48.png`, and `icon128.png` next to the script
 ## License
 
 [MIT](LICENSE)
+
+Deep mode embeds Dark Reader's dynamic engine, MIT © Dark Reader Ltd /
+contributors — vendored verbatim as
+[`vendor/darkreader.js`](vendor/darkreader.js)
+([license](vendor/LICENSE.darkreader)).

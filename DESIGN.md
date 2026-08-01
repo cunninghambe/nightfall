@@ -353,6 +353,72 @@ hostname, file:// is fine):
 - Dark fixed header (full-width, 64px tall) over white body -> invert (small
   surfaces must not fool the sampler).
 
+## v1.7 addendum — per-site Deep mode (vendored Dark Reader engine)
+
+Field verdict (Quantic, 2026-08-01): role-aware colour mapping beats pixel-space
+filtering on mid-grey-heavy designs, and always will — a rewriter can push
+text mid-greys UP and background mid-greys DOWN; a filter must send every
+mid-grey to one place. Rather than reimplement ten years of edge cases, Deep
+vendors Dark Reader's own dynamic engine (MIT) and quarantines it to sites the
+user explicitly picks. Their engine, our design: the filter stays the default;
+Deep pages opt into the heavyweight machinery.
+
+- Vendored: `vendor/darkreader.js` — Dark Reader v4.9.128, UMD build from the
+  darkreader npm package via unpkg, 346,017 bytes — plus
+  `vendor/LICENSE.darkreader` (MIT (c) 2026 Dark Reader Ltd.). Never modify the
+  vendored file. README gains an attribution line ("Deep mode embeds Dark
+  Reader's dynamic engine, MIT (c) Dark Reader Ltd / contributors").
+- manifest 1.7.0: `web_accessible_resources`:
+  `[{ "resources": ["vendor/darkreader.js"], "matches": ["http://*/*", "https://*/*"], "use_dynamic_url": true }]`.
+  No new permissions.
+- Storage: `sites[host] = 'deep'` — fourth override value. Auto never picks it.
+- content.js:
+  - resolve() adds `'deep'`; effectiveMode() unchanged (`topOn &&` gating works
+    for child frames; all_frames means each frame runs its own engine copy).
+  - apply() for 'deep': REMOVE `data-nightfall` (never both engines), stop the
+    scanner, lazy-load the engine exactly once per frame — guard first:
+    `if (!globalThis.DarkReader) await import(chrome.runtime.getURL('vendor/darkreader.js'))`
+    (the guard also lets fixtures preload the engine via a plain script tag).
+    The UMD bundle attaches `DarkReader` to the isolated-world global; handle
+    either the global or the module namespace. Then
+    `DarkReader.enable({ brightness: settings.brightness, contrast: settings.contrast, sepia: 0 })`.
+    enable() may need a body — if it throws pre-DOM, defer one apply to
+    DOMContentLoaded (a first-paint flash on Deep sites is an accepted trade).
+  - Slider changes while deep: call enable() again with new values (it updates
+    in place). Leaving deep: `DarkReader.disable()` (guard: only if loaded).
+  - Import failures (CSP-exotic pages, dead frame): catch, fall back to mode
+    'on' for that frame so the user still gets dark.
+  - Non-deep pages must never pay the cost: no import, no DarkReader global.
+- background.js: `'deep'` counts as on (topState + shortcut state); Alt+Shift+D
+  from deep -> 'off', as with soft.
+- popup: segmented control Auto | On | Soft | Deep | Off. Adjust .seg button
+  padding/font minimally if five labels crowd 280 px.
+- detect()/darkHosts/scanner/theme observers: untouched.
+
+Verification (file:// fixtures via the preload guard — dynamic ESM import does
+not run on file://, so fixtures preload the engine with a plain
+`<script src="darkreader.js">` before content.js; the real
+chrome.runtime.getURL import path is exercised only in the live extension and
+gets verified on a real site after install):
+- Copy vendor/darkreader.js into the fixture dir; stub
+  `chrome.runtime.getURL = (p) => p` (unused under preload, must exist).
+- deep fixture: hostname is empty on file://, so the site-override branch
+  can't be driven by `sites` — stub storage with `sites: {}` and drive deep
+  via a fixture-only override: FIXTURES may set the stubbed sync.get to return
+  a host key only when `location.hostname` is non-empty; for file:// use the
+  documented fallback of testing resolve()'s deep branch through a direct
+  storage stub keyed to '' being skipped — i.e., run the deep fixture over
+  http://localhost using the established nffix server pattern ONLY IF the
+  empty-host limitation can't be worked around; otherwise prefer file://.
+  Expected either way: NO `data-nightfall` attribute,
+  `document.querySelectorAll('style.darkreader').length > 0`, computed body
+  background luminance < 0.3 on a white-authored page.
+- on fixture regression: `data-nightfall=""`, full-invert filter, and
+  `typeof DarkReader === 'undefined'` (no engine loaded on non-deep pages —
+  this fixture must NOT preload the script tag).
+- soft fixture regression unchanged.
+- All prior fixture suites (v1.3 scanner, v1.4 tint, v1.6 backdrop) re-run.
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,
