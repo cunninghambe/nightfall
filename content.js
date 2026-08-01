@@ -140,11 +140,13 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
   }
 
   function refreshTopState() {
-    chrome.runtime.sendMessage({ type: 'topState' }, (res) => {
-      void chrome.runtime.lastError;
-      topOn = !!(res && res.on);
-      apply();
-    });
+    try {
+      chrome.runtime.sendMessage({ type: 'topState' }, (res) => {
+        void chrome.runtime.lastError;
+        topOn = !!(res && res.on);
+        apply();
+      });
+    } catch {} // orphaned frame: keep whatever state we last had
   }
 
   // --- stylesheet background-image scanner ---------------------------------
@@ -346,7 +348,9 @@ html[data-nightfall] :is(${MEDIA}):not(html[data-nightfall] :is(${MEDIA}) *) {
     if (host && !!darkHosts[host] !== isDark) {
       if (isDark) darkHosts[host] = true;
       else delete darkHosts[host];
-      chrome.storage.local.set({ darkHosts });
+      // Orphaned scripts (extension reloaded under a live tab) keep their DOM
+      // timers but lose chrome.*; fail silently instead of logging errors.
+      try { chrome.storage.local.set({ darkHosts }); } catch {}
     }
   }
 
