@@ -419,6 +419,17 @@ gets verified on a real site after install):
 - soft fixture regression unchanged.
 - All prior fixture suites (v1.3 scanner, v1.4 tint, v1.6 backdrop) re-run.
 
+## v1.7.2 addendum — the shortcut round-trips the mode
+
+Field bug: Alt+Shift+D from Deep went to Off, but toggling back wrote a bare
+'on', losing the user's mode. New sync key `lastModes: {}` (host -> the mode a
+site was in when turned Off: 'on' | 'soft' | 'deep' | 'auto'). Recorded by BOTH
+Off paths (shortcut and popup); consumed by the shortcut's on-branch, which
+restores the recorded mode ('auto' deletes the override). Guard: restoring
+'auto' when auto would skip the site (global off / cached-dark) forces 'on'
+instead — the user pressed the shortcut to SEE dark. content.js never reads
+lastModes.
+
 ## v1.1 verification (required)
 
 1. `node --check` content.js + background.js (in the C: tree), manifest parses,

@@ -1,4 +1,4 @@
-const DEFAULTS = { enabled: true, smart: true, brightness: 100, contrast: 100, sites: {} };
+const DEFAULTS = { enabled: true, smart: true, brightness: 100, contrast: 100, sites: {}, lastModes: {} };
 
 const $ = (id) => document.getElementById(id);
 const segButtons = document.querySelectorAll('#seg button');
@@ -25,9 +25,12 @@ function save(patch) {
 function setSite(value) {
   if (!host) return;
   const sites = { ...settings.sites };
+  const lastModes = { ...settings.lastModes };
+  // Turning a site off remembers its mode, so the shortcut restores it.
+  if (value === 'off') lastModes[host] = sites[host] || 'auto';
   if (value === 'auto') delete sites[host];
   else sites[host] = value;
-  save({ sites });
+  save({ sites, lastModes });
 }
 
 function render() {

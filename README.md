@@ -87,8 +87,8 @@ Click the toolbar icon to open the popup:
 | *Skip pages that are already dark or colorful* | Toggles smart detection |
 | **Brightness** (60–110%) / **Contrast** (60–140%) | Applied live to every darkened page; **Reset** restores 100% |
 
-**Alt+Shift+D** flips the current site between dark and light without opening
-the popup.
+**Alt+Shift+D** flips the current site between Off and whatever mode it was in
+(Auto, On, Soft, or Deep) without opening the popup.
 
 ## Regenerating the icons
 

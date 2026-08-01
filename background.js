@@ -1,4 +1,4 @@
-const DEFAULTS = { enabled: true, smart: true, brightness: 100, contrast: 100, sites: {} };
+const DEFAULTS = { enabled: true, smart: true, brightness: 100, contrast: 100, sites: {}, lastModes: {} };
 
 // Same resolution rules as content.js.
 function effectiveOn(settings, override, isDark) {
@@ -45,10 +45,23 @@ chrome.commands.onCommand.addListener((command) => {
     chrome.storage.sync.get(DEFAULTS, (settings) => {
       chrome.storage.local.get({ darkHosts: {} }, (local) => {
         const sites = { ...settings.sites };
-        const on = effectiveOn(settings, sites[host], !!local.darkHosts?.[host]);
-        sites[host] = on ? 'off' : 'on';
+        const lastModes = { ...settings.lastModes };
+        const isDark = !!local.darkHosts?.[host];
+        const on = effectiveOn(settings, sites[host], isDark);
+        if (on) {
+          // Remember what we're leaving so the next toggle restores it.
+          lastModes[host] = sites[host] || 'auto';
+          sites[host] = 'off';
+        } else {
+          let back = lastModes[host] || 'on';
+          // Restoring "auto" must visibly turn the site on; if auto would
+          // skip it (global off, cached-dark), force plain dark instead.
+          if (back === 'auto' && !effectiveOn(settings, undefined, isDark)) back = 'on';
+          if (back === 'auto') delete sites[host];
+          else sites[host] = back;
+        }
         // No tab messaging: the content script's storage listener picks this up.
-        chrome.storage.sync.set({ sites });
+        chrome.storage.sync.set({ sites, lastModes });
       });
     });
   });
